@@ -36,7 +36,10 @@ python3 tfidf_baseline.py
 
 ### 6. Run Improved Models
 ```bash
+python3 model.py
 python3 train.py
+python3 roberta.py
+python3 train_roberta.py
 ```
 
 ## Project Structure
