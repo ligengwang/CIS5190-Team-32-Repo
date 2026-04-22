@@ -117,43 +117,53 @@ def full_pipeline(raw_text,
                                lemmatize=lemmatize)
     return text
 
-#  LEADERBOARD ENTRY POINT
+#  IMPORTANT: LEADERBOARD ENTRY POINT!!!
 def prepare_data(path: str) -> Tuple[List[str], torch.Tensor]:
-    """
-    Load the validation CSV at 'path', clean headlines, return (X, y).
-
-    Columns: url, source, headline_raw, article_date,
-             scrape_status, error_message
-
-    X : list of cleaned headline strings
-    y : 1-D LongTensor  — FoxNews=1, NBC=0  
-    """
     df = pd.read_csv(path, encoding="utf-8-sig")
 
-    # Keep only successful scrapes
     if "scrape_status" in df.columns:
         df = df[df["scrape_status"] == "success"].copy()
 
-    # Handle missing headlines
-    df["headline_raw"] = df["headline_raw"].fillna("")
+    # find headline column
+    if "headline" in df.columns:
+        df["headline_raw"] = df["headline"].fillna("")
+    elif "headline_raw" in df.columns:
+        df["headline_raw"] = df["headline_raw"].fillna("")
+    else:
+        raise ValueError(f"No headline column found. Columns: {list(df.columns)}")
 
-    # Apply full cleaning pipeline
+    # apply full cleaning pipeline
     df["headline_clean"] = df["headline_raw"].apply(full_pipeline)
-
-    # Drop rows where cleaning produced an empty string
     df = df[df["headline_clean"].str.strip() != ""].copy()
 
-    # Encode labels: FoxNews=1, NBC=0
-    df["label"] = df["source"].apply(encode_label)
+    # infer label from URL if no source/label column ──
+    label_col = None
+    for col in ["source", "label", "Source", "Label"]:
+        if col in df.columns:
+            label_col = col
+            break
 
-    # Drop rows with unknown source (label == -1)
+    if label_col is not None:
+        df["label"] = df[label_col].apply(encode_label)
+    elif "url" in df.columns:
+        # infer from URL: foxnews.com 1, nbcnews.com 0
+        def label_from_url(url: str) -> int:
+            url = str(url).lower()
+            if "fox" in url:
+                return 1
+            if "nbc" in url:
+                return 0
+            return -1
+        df["label"] = df["url"].apply(label_from_url)
+    else:
+        raise ValueError(f"No label column found. Columns: {list(df.columns)}")
+
     df = df[df["label"] != -1].copy()
 
     X: List[str] = df["headline_clean"].tolist()
     y = torch.tensor(df["label"].tolist(), dtype=torch.long)
 
     return X, y
-
 
 def main():
     # Read
