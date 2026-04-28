@@ -49,3 +49,16 @@ python3 train_roberta.py
 
 ## Project Structure
 To be continued..
+
+## Experiment Tracking Update
+
+Added `baseline_experiments.py` for reproducible classical-model experiments on `scraped_headlines_clean_latest.csv`.
+
+This script:
+- runs the spec-style TF-IDF + Logistic Regression baseline
+- compares several stronger classical models under the same split
+- saves a metrics table to `experiment_results.csv`
+- saves a line chart to `experiment_metrics.png`
+- saves interpretable top-feature analysis for the best word-level logistic-regression model to `top_features_word_logreg.json`
+
+Also added `EXPERIMENT_SUMMARY.md` with a short write-up of the experiment design, results, and recommended next step.
